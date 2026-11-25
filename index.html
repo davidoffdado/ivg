@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
 <style>
   :root {
     color-scheme: light;
@@ -46,6 +47,10 @@
   #tip b { display: block; margin-bottom: 2px; }
   #tip .r { display: flex; justify-content: space-between; gap: 14px; color: var(--ink2); }
   #tip .r span:last-child { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .comandi { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-start; }
+  .comandi select { font: 600 14px 'Barlow', sans-serif; padding: 7px 10px; border: 1px solid var(--ink); background: #fff; color: var(--ink); border-radius: 0; }
+  #torna { position: absolute; top: 6px; left: 6px; font: 600 13px 'Barlow', sans-serif; background: #fff; border: 1px solid var(--ink); padding: 5px 10px; cursor: pointer; display: none; }
+  #g-italia .reg { cursor: pointer; }
   details { margin-top: 10px; font-size: 14px; }
   summary { cursor: pointer; color: var(--ink2); font-weight: 600; }
   table { border-collapse: collapse; width: 100%; margin-top: 8px; font-variant-numeric: tabular-nums; }
@@ -89,6 +94,22 @@
     <p class="sub" id="cifra-marche" style="margin:0 0 6px"></p>
     <div class="chart"></div>
     <p class="nota">Fonte: elaborazione su dati ISS, punti IVG (dati 2024); ISTAT, censimento 2021; OpenStreetMap. Tempi calcolati con r5r dal baricentro del comune pesato sulle donne di 15-49 anni; considerano anche le strutture delle regioni confinanti. "Farmacologiche": strutture con almeno una IVG farmacologica nel 2024.</p>
+  </section>
+
+  <section class="grafico" id="g-italia">
+    <h2>Quanto è lontano l'ospedale, comune per comune</h2>
+    <p class="sub">Minuti in auto dal comune all'ospedale più vicino, senza traffico. Clicca su una regione per vederla da vicino.</p>
+    <div class="comandi">
+      <div class="interruttore" role="group" aria-label="Tipo di struttura">
+        <button aria-pressed="true" data-k="A">Ospedale che fa IVG</button>
+        <button aria-pressed="false" data-k="B">Ospedale che fa IVG farmacologiche</button>
+      </div>
+      <select id="sel-regione" aria-label="Regione"><option value="">Tutta Italia</option></select>
+    </div>
+    <div class="legenda" id="leg-italia"></div>
+    <p class="sub" id="cifra-italia" style="margin:0 0 6px"></p>
+    <div class="chart" style="position:relative"><span id="carica" class="nota">Carico la mappa…</span></div>
+    <p class="nota">Fonte: come sopra. Le percentuali sono calcolate sulle donne di 15-49 anni per sezione di censimento.</p>
   </section>
 
   <section class="grafico" id="g-mobilita">
@@ -237,6 +258,85 @@ Promise.all([
       .on('touchstart', (e, d) => mostra(e.touches[0], html(d)), { passive: true });
   }
   tabella('#g-mobilita', [['Regione di residenza', d => d.regione], ['IVG fuori', d => fmt(d.ivg)], ['Spontanei fuori', d => fmt(d.spontanei)], ['Rapporto', d => d.rapporto.toLocaleString('it-IT')]], md);
+});
+// 5. Mappa Italia con zoom sulle regioni
+const titolo = s => s.toLowerCase().replace(/(^|[\s'(])\S/g, c => c.toUpperCase());
+Promise.all([d3.json('dati/italia.topojson'), d3.json('dati/italia_strutture.json'), d3.json('dati/italia_regioni.json')])
+.then(([topo, str, reg]) => {
+  d3.select('#carica').remove();
+  const comuni = topojson.feature(topo, topo.objects.comuni).features;
+  const regioni = topojson.feature(topo, topo.objects.regioni).features;
+  const R = new Map(reg.map(d => [d.COD_REG, d]));
+  const ITA = { regione: 'Italia', A30: 16.1, B30: 18.1 }; // output/sintesi_italia.csv
+  const cols = ['#fbe1e4', '#f0909e', '#d21e36', '#7a0f1f'];
+  const col = d3.scaleThreshold().domain([15, 30, 45]).range(cols);
+  d3.select('#leg-italia').html(['fino a 15 min', '15-30 min', '30-45 min', 'oltre 45 min'].map((e, i) => `<span><i class="q" style="background:${cols[i]}"></i>${e}</span>`).join('') +
+    `<span><i style="background:${C.ink}"></i>struttura</span><span><i style="background:#fff;border:2px solid ${C.ink}"></i>senza farmacologica</span>`);
+
+  const W = 720, H = 860;
+  const proj = d3.geoMercator().fitExtent([[6, 6], [W - 6, H - 6]], { type: 'FeatureCollection', features: regioni });
+  const path = d3.geoPath(proj);
+  const box = d3.select('#g-italia .chart');
+  const svg = box.append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const torna = box.append('button').attr('id', 'torna').text('← Tutta Italia');
+  const g = svg.append('g');
+  let k = 'A', sel = null;
+
+  const com = g.append('g').selectAll('path').data(comuni).join('path').attr('d', path)
+    .attr('stroke', '#fff').attr('stroke-width', 0).attr('vector-effect', 'non-scaling-stroke');
+  const tipCom = (ev, f) => { const p = f.properties; if (p.A == null) return;
+    mostra(ev, `<b>${p.comune}</b>${riga('Ospedale che fa IVG', p.A + ' min')}${riga('Con farmacologica', p.B + ' min')}<div style="color:#6b7280;margin-top:4px">Più vicino: ${titolo(k === 'A' ? p.A_str : p.B_str)}</div>`); };
+  com.on('mousemove', tipCom).on('mouseleave', nascondi).on('touchstart', ev => tipCom(ev.touches[0], d3.select(ev.currentTarget).datum()), { passive: true });
+
+  g.append('path').datum(topojson.mesh(topo, topo.objects.regioni, (a, b) => a !== b)).attr('d', path)
+    .attr('fill', 'none').attr('stroke', '#fff').attr('stroke-width', 1.4).attr('vector-effect', 'non-scaling-stroke').style('pointer-events', 'none');
+
+  const pts = g.append('g').selectAll('circle').data(str).join('circle')
+    .attr('cx', d => proj([d.lon, d.lat])[0]).attr('cy', d => proj([d.lon, d.lat])[1])
+    .attr('stroke-width', 1).attr('vector-effect', 'non-scaling-stroke')
+    .on('mousemove', (ev, d) => mostra(ev, `<b>${titolo(d.struttura)}</b>${riga('IVG nel 2024', num(d.ivg))}${riga('di cui farmacologiche', num(d.farm))}`))
+    .on('mouseleave', nascondi);
+
+  const tipReg = (ev, f) => { const r = R.get(f.properties.COD_REG);
+    mostra(ev, `<b>${r.regione}</b>${riga('Oltre 30 min da un ospedale IVG', fmt(r.A30))}${riga('Oltre 30 min dalla pillola', fmt(r.B30))}<div style="color:#6b7280;margin-top:4px">Clicca per vedere i comuni</div>`); };
+  const ov = g.append('g').selectAll('path').data(regioni).join('path').attr('class', 'reg').attr('d', path)
+    .on('mousemove', tipReg).on('mouseleave', nascondi)
+    .on('click', (ev, f) => { nascondi(); zoom(f.properties.COD_REG); });
+
+  function disegna() {
+    com.attr('fill', f => f.properties[k] == null ? '#eee' : col(f.properties[k]));
+    pts.attr('fill', d => (k === 'B' && d.farm === 0) ? '#fff' : C.ink).attr('stroke', d => (k === 'B' && d.farm === 0) ? C.ink : '#fff');
+    const r = sel ? R.get(sel) : ITA, v = k === 'A' ? r.A30 : r.B30;
+    d3.select('#cifra-italia').html(`<span class="cifra">${fmt(v)}</span> delle donne di 15-49 anni ${sel ? 'in ' + r.regione : 'in Italia'} vive a più di 30 minuti ${k === 'A' ? 'da un ospedale che fa IVG' : 'da un ospedale che offre la pillola abortiva'}`);
+  }
+  function zoom(cod) {
+    sel = cod || null;
+    let t = d3.zoomIdentity;
+    if (sel) {
+      const [[x0, y0], [x1, y1]] = path.bounds(regioni.find(f => f.properties.COD_REG === sel));
+      const s = Math.min(14, 0.92 / Math.max((x1 - x0) / W, (y1 - y0) / H));
+      t = d3.zoomIdentity.translate(W / 2, H / 2).scale(s).translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
+    }
+    g.transition().duration(650).attr('transform', t.toString());
+    pts.transition().duration(650).attr('r', (sel ? 5.5 : 2.6) / t.k);
+    com.attr('stroke-width', sel ? 0.4 : 0);
+    ov.attr('fill', f => sel && f.properties.COD_REG !== sel ? 'rgba(255,255,255,.75)' : 'transparent')
+      .style('pointer-events', f => sel && f.properties.COD_REG === sel ? 'none' : 'all');
+    pts.style('pointer-events', sel ? 'all' : 'none').raise();
+    torna.style('display', sel ? 'block' : 'none');
+    d3.select('#sel-regione').property('value', sel || '');
+    disegna();
+  }
+  d3.select('#sel-regione').selectAll('option.r').data(reg.slice().sort((a, b) => a.regione.localeCompare(b.regione)))
+    .join('option').attr('class', 'r').attr('value', d => d.COD_REG).text(d => d.regione);
+  d3.select('#sel-regione').on('change', function () { zoom(+this.value || null); });
+  torna.on('click', () => zoom(null));
+  d3.selectAll('#g-italia .interruttore button').on('click', function () {
+    k = this.dataset.k;
+    d3.selectAll('#g-italia .interruttore button').attr('aria-pressed', function () { return this.dataset.k === k; });
+    disegna();
+  });
+  pts.raise(); zoom(null);
 });
 addEventListener('scroll', nascondi, { passive: true });
 </script>
