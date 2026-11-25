@@ -59,28 +59,28 @@
 </head>
 <body>
 <main>
-  <div class="kicker">Inchiesta · bozza dei grafici</div>
-  <h1>Aborto in Italia: attese, settimane e pillola, ospedale per ospedale</h1>
-  <p class="sommario">Con la stessa legge, il servizio cambia molto da una regione all'altra. Quattro grafici preliminari sui dati ISS per struttura e ISTAT, da usare come base per l'inchiesta.</p>
-  <div class="firma">di <b>David Ruffini</b> · versione di lavoro, novembre 2026 · passa il cursore (o tocca) sui grafici per i dettagli</div>
+  <div class="kicker">Aborto</div>
+  <h1>Attese, settimane e pillola: l'aborto in Italia regione per regione</h1>
+  <p class="sommario">In Lombardia quasi un'interruzione di gravidanza su dieci arriva dopo più di tre settimane dal certificato. Nelle Marche cinque ospedali su tredici non hanno usato la pillola abortiva nemmeno una volta nel 2024. E dal Veneto due donne su tre che abortiscono fuori regione vanno in Trentino-Alto Adige.</p>
+  <div class="firma"><b>David Ruffini</b>, novembre 2026</div>
 
   <section class="grafico" id="g-attese">
     <h2>In Lombardia l'attesa supera le tre settimane in quasi un caso su dieci</h2>
-    <p class="sub">Quota di IVG in cui sono passati più di 21 giorni tra certificato e intervento, per regione dell'intervento, 2024. La legge prevede un'attesa minima di 7 giorni.</p>
+    <p class="sub">IVG con più di 21 giorni tra certificato e intervento, per regione, 2024. La legge prevede almeno 7 giorni.</p>
     <div class="chart"></div>
     <p class="nota"></p>
   </section>
 
   <section class="grafico" id="g-settimane">
     <h2>In cinque territori oltre il 12% delle IVG avviene a 11-12 settimane</h2>
-    <p class="sub">Quota di interruzioni effettuate nelle ultime due settimane consentite, per regione dell'intervento, 2024. A quel punto l'aborto farmacologico, consentito fino alla nona settimana, non è più possibile.</p>
+    <p class="sub">IVG fatte nelle ultime due settimane consentite, per regione, 2024. A quel punto si può fare solo l'intervento chirurgico: la pillola si usa fino alla nona settimana.</p>
     <div class="chart"></div>
     <p class="nota">Fonte: elaborazione su dati ISTAT, Interruzioni volontarie della gravidanza (2024). Percentuali sulle IVG con settimane indicate.</p>
   </section>
 
   <section class="grafico" id="g-marche">
     <h2>Nelle Marche la pillola abortiva è più lontana</h2>
-    <p class="sub">Minuti in auto dal comune di residenza alla struttura più vicina, senza traffico. Nel 2024 5 ospedali marchigiani su 13 non hanno fatto nessuna IVG farmacologica.</p>
+    <p class="sub">Minuti in auto dal comune all'ospedale più vicino, senza traffico.</p>
     <div class="interruttore" role="group" aria-label="Tipo di struttura">
       <button aria-pressed="true" data-k="A">Ospedale che fa IVG</button>
       <button aria-pressed="false" data-k="B">Ospedale che fa IVG farmacologiche</button>
@@ -92,8 +92,8 @@
   </section>
 
   <section class="grafico" id="g-mobilita">
-    <h2>Venete e marchigiane abortiscono fuori regione più del doppio di quanto vi risultino per un aborto spontaneo</h2>
-    <p class="sub">Quota di residenti che abortisce in un'altra regione, 2023-2024. Gli aborti spontanei non si programmano e servono da termine di confronto. In alto le regioni con il rapporto più alto.</p>
+    <h2>Da Veneto, Marche e Basilicata si va fuori regione per abortire</h2>
+    <p class="sub">Residenti che abortiscono in un'altra regione, 2023-2024. Gli aborti spontanei, che non si programmano, servono da confronto.</p>
     <div class="legenda">
       <span><i style="background:var(--rosso)"></i>Interruzioni volontarie</span>
       <span><i style="background:var(--blu)"></i>Aborti spontanei (confronto)</span>
@@ -103,9 +103,8 @@
   </section>
 
   <div class="metodo">
-    <h3>Dati e metodo</h3>
-    <p>Le strutture e i loro dati (IVG totali, farmacologiche, settimane) vengono dall'elenco per singolo ospedale pubblicato dall'Istituto Superiore di Sanità, con dati 2024. Attese, settimane e mobilità sono dati ISTAT per regione. La popolazione femminile di 15-49 anni è quella del censimento 2021 per sezione; i tempi di percorrenza sono calcolati sulla rete stradale di OpenStreetMap.</p>
-    <p>Sono grafici di lavoro: nell'inchiesta saranno affiancati dalle risposte alle richieste di accesso civico inviate alla Regione Marche e alle aziende sanitarie di Ancona, Macerata e Fermo.</p>
+    <h3>Fonti</h3>
+    <p>I dati per ospedale sono quelli pubblicati dall'Istituto Superiore di Sanità (2024). Attese, settimane e spostamenti vengono dall'ISTAT. Le donne tra 15 e 49 anni sono contate dal censimento 2021, i tempi in auto calcolati sulle strade di OpenStreetMap.</p>
   </div>
 </main>
 <div id="tip" role="tooltip"></div>
@@ -127,7 +126,7 @@ const nascondi = () => tip.style('opacity', 0);
 const riga = (k, v) => `<div class="r"><span>${k}</span><span>${v}</span></div>`;
 function tabella(sel, cols, rows) {
   const d = d3.select(sel).append('details');
-  d.append('summary').text('Mostra i dati in tabella');
+  d.append('summary').text('Dati');
   const t = d.append('table');
   t.append('thead').append('tr').selectAll('th').data(cols).join('th').text(c => c[0]);
   t.append('tbody').selectAll('tr').data(rows).join('tr').selectAll('td').data(r => cols.map(c => c[1](r))).join('td').text(v => v);
