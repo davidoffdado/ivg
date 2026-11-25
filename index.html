@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aborto in Italia: attese, settimane e pillola - grafici interattivi</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --rosso: #d21e36; --rosso-kicker: #e51f3d; --blu: #006ab3;
+    --ink: #111827; --ink2: #4b5563; --muted: #6b7280;
+    --grigio: #cfd2d6; --grid: #e5e7eb; --bg: #ffffff; --soft: #f5f2ee;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Barlow', sans-serif; font-size: 17px; line-height: 1.5; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+  .kicker { color: var(--rosso-kicker); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 13px; }
+  h1 { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: clamp(30px, 5vw, 42px); line-height: 1.1; margin: 8px 0 12px; }
+  .sommario { font-size: 19px; color: var(--ink2); margin: 0 0 14px; }
+  .firma { font-size: 14px; color: var(--muted); border-bottom: 1px solid var(--grid); padding-bottom: 18px; margin-bottom: 8px; }
+  .firma b { color: var(--ink); }
+  section.grafico { margin: 44px 0; }
+  h2 { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 24px; line-height: 1.2; margin: 0 0 6px; }
+  .sub { color: var(--ink2); font-size: 15.5px; margin: 0 0 14px; }
+  .nota { color: var(--muted); font-size: 13px; margin-top: 10px; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  svg text { font-family: 'Barlow', sans-serif; }
+  .asse text { fill: var(--ink2); font-size: 13px; }
+  .valore { fill: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .legenda { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--ink2); margin: 0 0 10px; }
+  .legenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .legenda i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .legenda i.q { border-radius: 2px; }
+  .interruttore { display: inline-flex; border: 1px solid var(--ink); margin: 0 0 12px; }
+  .interruttore button { font: 600 14px 'Barlow', sans-serif; background: #fff; color: var(--ink); border: 0; padding: 7px 14px; cursor: pointer; }
+  .interruttore button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .interruttore button:focus-visible { outline: 2px solid var(--rosso); outline-offset: 2px; }
+  .cifra { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 20px; }
+  #tip { position: fixed; pointer-events: none; background: #fff; border: 1px solid var(--grid); box-shadow: 0 4px 14px rgba(0,0,0,.08);
+         padding: 8px 10px; font-size: 14px; line-height: 1.35; max-width: 260px; opacity: 0; transition: opacity .1s; z-index: 10; }
+  #tip b { display: block; margin-bottom: 2px; }
+  #tip .r { display: flex; justify-content: space-between; gap: 14px; color: var(--ink2); }
+  #tip .r span:last-child { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  details { margin-top: 10px; font-size: 14px; }
+  summary { cursor: pointer; color: var(--ink2); font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--ink2); font-weight: 600; }
+  .metodo { background: var(--soft); padding: 18px 20px; font-size: 14.5px; color: var(--ink2); margin-top: 48px; }
+  .metodo h3 { margin: 0 0 6px; font-size: 15px; color: var(--ink); text-transform: uppercase; letter-spacing: .05em; }
+  .metodo p { margin: 0 0 8px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">Inchiesta · bozza dei grafici</div>
+  <h1>Aborto in Italia: attese, settimane e pillola, ospedale per ospedale</h1>
+  <p class="sommario">Con la stessa legge, il servizio cambia molto da una regione all'altra. Quattro grafici preliminari sui dati ISS per struttura e ISTAT, da usare come base per l'inchiesta.</p>
+  <div class="firma">di <b>David Ruffini</b> · versione di lavoro, novembre 2026 · passa il cursore (o tocca) sui grafici per i dettagli</div>
+
+  <section class="grafico" id="g-attese">
+    <h2>In Lombardia l'attesa supera le tre settimane in quasi un caso su dieci</h2>
+    <p class="sub">Quota di IVG in cui sono passati più di 21 giorni tra certificato e intervento, per regione dell'intervento, 2024. La legge prevede un'attesa minima di 7 giorni.</p>
+    <div class="chart"></div>
+    <p class="nota"></p>
+  </section>
+
+  <section class="grafico" id="g-settimane">
+    <h2>In cinque territori oltre il 12% delle IVG avviene a 11-12 settimane</h2>
+    <p class="sub">Quota di interruzioni effettuate nelle ultime due settimane consentite, per regione dell'intervento, 2024. A quel punto l'aborto farmacologico, consentito fino alla nona settimana, non è più possibile.</p>
+    <div class="chart"></div>
+    <p class="nota">Fonte: elaborazione su dati ISTAT, Interruzioni volontarie della gravidanza (2024). Percentuali sulle IVG con settimane indicate.</p>
+  </section>
+
+  <section class="grafico" id="g-marche">
+    <h2>Nelle Marche la pillola abortiva è più lontana</h2>
+    <p class="sub">Minuti in auto dal comune di residenza alla struttura più vicina, senza traffico. Nel 2024 5 ospedali marchigiani su 13 non hanno fatto nessuna IVG farmacologica.</p>
+    <div class="interruttore" role="group" aria-label="Tipo di struttura">
+      <button aria-pressed="true" data-k="A">Ospedale che fa IVG</button>
+      <button aria-pressed="false" data-k="B">Ospedale che fa IVG farmacologiche</button>
+    </div>
+    <div class="legenda" id="leg-marche"></div>
+    <p class="sub" id="cifra-marche" style="margin:0 0 6px"></p>
+    <div class="chart"></div>
+    <p class="nota">Fonte: elaborazione su dati ISS, punti IVG (dati 2024); ISTAT, censimento 2021; OpenStreetMap. Tempi calcolati con r5r dal baricentro del comune pesato sulle donne di 15-49 anni; considerano anche le strutture delle regioni confinanti. "Farmacologiche": strutture con almeno una IVG farmacologica nel 2024.</p>
+  </section>
+
+  <section class="grafico" id="g-mobilita">
+    <h2>Venete e marchigiane abortiscono fuori regione più del doppio di quanto vi risultino per un aborto spontaneo</h2>
+    <p class="sub">Quota di residenti che abortisce in un'altra regione, 2023-2024. Gli aborti spontanei non si programmano e servono da termine di confronto. In alto le regioni con il rapporto più alto.</p>
+    <div class="legenda">
+      <span><i style="background:var(--rosso)"></i>Interruzioni volontarie</span>
+      <span><i style="background:var(--blu)"></i>Aborti spontanei (confronto)</span>
+    </div>
+    <div class="chart"></div>
+    <p class="nota">Fonte: elaborazione su dati ISTAT, IVG per residenza e luogo dell'intervento; dimissioni per aborto spontaneo per residenza e luogo (2023-2024).</p>
+  </section>
+
+  <div class="metodo">
+    <h3>Dati e metodo</h3>
+    <p>Le strutture e i loro dati (IVG totali, farmacologiche, settimane) vengono dall'elenco per singolo ospedale pubblicato dall'Istituto Superiore di Sanità, con dati 2024. Attese, settimane e mobilità sono dati ISTAT per regione. La popolazione femminile di 15-49 anni è quella del censimento 2021 per sezione; i tempi di percorrenza sono calcolati sulla rete stradale di OpenStreetMap.</p>
+    <p>Sono grafici di lavoro: nell'inchiesta saranno affiancati dalle risposte alle richieste di accesso civico inviate alla Regione Marche e alle aziende sanitarie di Ancona, Macerata e Fermo.</p>
+  </div>
+</main>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const C = { rosso: '#d21e36', blu: '#006ab3', grigio: '#cfd2d6', ink: '#111827', ink2: '#4b5563', grid: '#e5e7eb', bg: '#ffffff' };
+const fmt = v => v == null ? 'n.d.' : v.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+const num = v => v.toLocaleString('it-IT');
+const tip = d3.select('#tip');
+function mostra(ev, html) {
+  tip.html(html).style('opacity', 1);
+  const t = tip.node().getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + t.width > innerWidth - 8) x = ev.clientX - t.width - 14;
+  if (y + t.height > innerHeight - 8) y = ev.clientY - t.height - 14;
+  tip.style('left', x + 'px').style('top', y + 'px');
+}
+const nascondi = () => tip.style('opacity', 0);
+const riga = (k, v) => `<div class="r"><span>${k}</span><span>${v}</span></div>`;
+function tabella(sel, cols, rows) {
+  const d = d3.select(sel).append('details');
+  d.append('summary').text('Mostra i dati in tabella');
+  const t = d.append('table');
+  t.append('thead').append('tr').selectAll('th').data(cols).join('th').text(c => c[0]);
+  t.append('tbody').selectAll('tr').data(rows).join('tr').selectAll('td').data(r => cols.map(c => c[1](r))).join('td').text(v => v);
+}
+
+// Barre orizzontali: una serie, evidenza in rosso
+function barre(sel, dati, chiave, evid, tipHtml) {
+  const W = 720, rh = 26, m = { t: 4, r: 56, b: 24, l: 150 };
+  dati = dati.slice().sort((a, b) => b[chiave] - a[chiave]);
+  const H = m.t + m.b + rh * dati.length;
+  const svg = d3.select(sel + ' .chart').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const x = d3.scaleLinear().domain([0, d3.max(dati, d => d[chiave]) * 1.05]).nice().range([m.l, W - m.r]);
+  const y = d3.scaleBand().domain(dati.map(d => d.regione)).range([m.t, H - m.b]).padding(0.28);
+  svg.append('g').selectAll('line').data(x.ticks(5)).join('line')
+    .attr('x1', d => x(d)).attr('x2', d => x(d)).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', C.grid);
+  svg.append('g').attr('class', 'asse').attr('transform', `translate(0,${H - m.b})`)
+    .call(d3.axisBottom(x).ticks(5).tickSize(0).tickFormat(d => d + '%')).call(g => g.select('.domain').remove()).selectAll('text').attr('dy', '1.1em');
+  svg.append('g').attr('class', 'asse').selectAll('text').data(dati).join('text')
+    .attr('x', m.l - 10).attr('y', d => y(d.regione) + y.bandwidth() / 2).attr('dy', '0.35em').attr('text-anchor', 'end')
+    .style('font-weight', d => evid(d) ? 700 : 400).style('fill', d => evid(d) ? C.ink : null).text(d => d.regione);
+  const g = svg.append('g').selectAll('g').data(dati).join('g');
+  g.append('path').attr('fill', d => evid(d) ? C.rosso : C.grigio).attr('d', d => {
+    const x0 = x(0), x1 = x(d[chiave]), y0 = y(d.regione), h = y.bandwidth(), r = Math.min(4, x1 - x0);
+    return `M${x0},${y0}H${x1 - r}Q${x1},${y0} ${x1},${y0 + r}V${y0 + h - r}Q${x1},${y0 + h} ${x1 - r},${y0 + h}H${x0}Z`;
+  });
+  g.append('text').attr('class', 'valore').attr('x', d => x(d[chiave]) + 6).attr('y', d => y(d.regione) + y.bandwidth() / 2).attr('dy', '0.35em').text(d => fmt(d[chiave]));
+  g.append('rect').attr('x', 0).attr('width', W).attr('y', d => y(d.regione) - y.step() * y.paddingInner() / 2).attr('height', y.step()).attr('fill', 'transparent')
+    .on('mousemove', (ev, d) => mostra(ev, tipHtml(d))).on('mouseleave', nascondi)
+    .on('touchstart', (ev, d) => mostra(ev.touches[0], tipHtml(d)), { passive: true });
+}
+
+Promise.all([
+  d3.json('dati/settimane_attese.json'), d3.json('dati/mobilita.json'),
+  d3.json('dati/marche_comuni.geojson'), d3.json('dati/marche_strutture.json')
+]).then(([sa, mob, geo, str]) => {
+  // 1. Attese
+  const att = sa.filter(d => d.pct_attesa_ignota < 15);
+  const escl = sa.filter(d => d.pct_attesa_ignota >= 15).map(d => `${d.regione} (${fmt(d.pct_attesa_ignota)} non indicato)`);
+  barre('#g-attese', att, 'pct_attesa_oltre21', d => d.regione === 'Lombardia', d =>
+    `<b>${d.regione}</b>${riga('Oltre 21 giorni', fmt(d.pct_attesa_oltre21))}${riga('Entro 14 giorni', fmt(d.pct_attesa_entro14))}${riga('Attesa non indicata', fmt(d.pct_attesa_ignota))}${riga('IVG nel 2024', num(d.ivg))}`);
+  d3.select('#g-attese .nota').text(`Fonte: elaborazione su dati ISTAT (2024). Escluse le regioni con attesa non indicata in oltre il 15% dei casi: ${escl.join(', ')}.`);
+  tabella('#g-attese', [['Regione', d => d.regione], ['Oltre 21 giorni', d => fmt(d.pct_attesa_oltre21)], ['Entro 14 giorni', d => fmt(d.pct_attesa_entro14)], ['Non indicata', d => fmt(d.pct_attesa_ignota)]],
+    sa.slice().sort((a, b) => b.pct_attesa_oltre21 - a.pct_attesa_oltre21));
+
+  // 2. Settimane
+  barre('#g-settimane', sa, 'pct_11_12', d => d.pct_11_12 >= 12, d =>
+    `<b>${d.regione}</b>${riga('A 11-12 settimane', fmt(d.pct_11_12))}${riga('Entro 8 settimane', fmt(d.pct_entro8))}${riga('13 settimane e oltre', fmt(d.pct_13_piu))}${riga('IVG nel 2024', num(d.ivg))}`);
+  tabella('#g-settimane', [['Regione', d => d.regione], ['Entro 8 sett.', d => fmt(d.pct_entro8)], ['11-12 sett.', d => fmt(d.pct_11_12)], ['13 e oltre', d => fmt(d.pct_13_piu)]],
+    sa.slice().sort((a, b) => b.pct_11_12 - a.pct_11_12));
+
+  // 3. Mappa Marche
+  const classi = [15, 30, 45], cols = ['#fbe1e4', '#f0909e', '#d21e36', '#7a0f1f'];
+  const etich = ['fino a 15 min', '15-30 min', '30-45 min', 'oltre 45 min'];
+  const col = d3.scaleThreshold().domain(classi).range(cols);
+  d3.select('#leg-marche').html(etich.map((e, i) => `<span><i class="q" style="background:${cols[i]}"></i>${e}</span>`).join('') +
+    `<span><i style="background:${C.ink}"></i>struttura</span><span><i style="background:#fff;border:2px solid ${C.ink}"></i>senza farmacologica</span>`);
+  const W = 720, H = 640;
+  const proj = d3.geoMercator().fitExtent([[4, 4], [W - 4, H - 4]], geo);
+  const path = d3.geoPath(proj);
+  const svg = d3.select('#g-marche .chart').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const com = svg.append('g').selectAll('path').data(geo.features).join('path').attr('d', path)
+    .attr('stroke', '#fff').attr('stroke-width', 0.6);
+  let k = 'A';
+  const tipCom = (ev, f) => { const p = f.properties; mostra(ev, `<b>${p.comune}</b>${riga('Ospedale che fa IVG', p.A + ' min')}${riga('Con farmacologica', p.B + ' min')}<div style="color:#6b7280;margin-top:4px">Più vicino: ${(k === 'A' ? p.A_str : p.B_str).toLowerCase()}</div>`); };
+  com.on('mousemove', tipCom).on('mouseleave', nascondi).on('touchstart', ev => tipCom(ev.touches[0], d3.select(ev.currentTarget).datum()), { passive: true });
+  const pts = svg.append('g').selectAll('circle').data(str).join('circle')
+    .attr('cx', d => proj([d.lon, d.lat])[0]).attr('cy', d => proj([d.lon, d.lat])[1]).attr('r', 6)
+    .attr('stroke', '#fff').attr('stroke-width', 2)
+    .on('mousemove', (ev, d) => mostra(ev, `<b>${d.struttura.toLowerCase().replace(/^\w/, c => c.toUpperCase())}</b>${riga('IVG nel 2024', num(d.ivg))}${riga('di cui farmacologiche', num(d.farm))}`))
+    .on('mouseleave', nascondi);
+  const tot = d3.sum(geo.features, f => f.properties.donne);
+  function disegna() {
+    com.transition().duration(350).attr('fill', f => f.properties[k] == null ? '#eee' : col(f.properties[k]));
+    pts.attr('fill', d => (k === 'B' && d.farm === 0) ? '#fff' : C.ink)
+       .attr('stroke', d => (k === 'B' && d.farm === 0) ? C.ink : '#fff');
+    const oltre = d3.sum(geo.features.filter(f => f.properties[k] > 30), f => f.properties.donne) / tot * 100;
+    d3.select('#cifra-marche').html(`<span class="cifra">${fmt(oltre).replace(',0', '')}</span> delle donne di 15-49 anni vive a più di 30 minuti ${k === 'A' ? 'da un ospedale che fa IVG' : 'da un ospedale che offre la pillola abortiva'}`);
+  }
+  d3.selectAll('#g-marche .interruttore button').on('click', function () {
+    k = this.dataset.k;
+    d3.selectAll('#g-marche .interruttore button').attr('aria-pressed', function () { return this.dataset.k === k; });
+    disegna();
+  });
+  disegna();
+  tabella('#g-marche', [['Comune', d => d.comune], ['Ospedale IVG (min)', d => d.A], ['Con farmacologica (min)', d => d.B], ['Donne 15-49', d => num(d.donne)]],
+    geo.features.map(f => f.properties).sort((a, b) => b.B - a.B));
+
+  // 4. Mobilità: dumbbell
+  const md = mob.slice().sort((a, b) => b.rapporto - a.rapporto);
+  {
+    const W = 720, rh = 26, m = { t: 6, r: 24, b: 24, l: 150 }, H = m.t + m.b + rh * md.length;
+    const svg = d3.select('#g-mobilita .chart').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+    const x = d3.scaleLinear().domain([0, d3.max(md, d => Math.max(d.ivg, d.spontanei))]).nice().range([m.l, W - m.r]);
+    const y = d3.scalePoint().domain(md.map(d => d.regione)).range([m.t + rh / 2, H - m.b - rh / 2]);
+    const ev = d => d.rapporto > 2 && d.ivg > 10;
+    svg.append('g').selectAll('line').data(x.ticks(6)).join('line').attr('x1', d => x(d)).attr('x2', d => x(d)).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', C.grid);
+    svg.append('g').attr('class', 'asse').attr('transform', `translate(0,${H - m.b})`)
+      .call(d3.axisBottom(x).ticks(6).tickSize(0).tickFormat(d => d + '%')).call(g => g.select('.domain').remove()).selectAll('text').attr('dy', '1.1em');
+    svg.append('g').attr('class', 'asse').selectAll('text').data(md).join('text').attr('x', m.l - 10).attr('y', d => y(d.regione)).attr('dy', '0.35em')
+      .attr('text-anchor', 'end').style('font-weight', d => ev(d) ? 700 : 400).style('fill', d => ev(d) ? C.ink : null).text(d => d.regione);
+    const g = svg.append('g').selectAll('g').data(md).join('g');
+    g.append('line').attr('x1', d => x(d.spontanei)).attr('x2', d => x(d.ivg)).attr('y1', d => y(d.regione)).attr('y2', d => y(d.regione)).attr('stroke', '#d9d8d2').attr('stroke-width', 3);
+    g.append('circle').attr('cx', d => x(d.spontanei)).attr('cy', d => y(d.regione)).attr('r', 5.5).attr('fill', C.blu).attr('stroke', '#fff').attr('stroke-width', 2);
+    g.append('circle').attr('cx', d => x(d.ivg)).attr('cy', d => y(d.regione)).attr('r', 5.5).attr('fill', C.rosso).attr('stroke', '#fff').attr('stroke-width', 2);
+    const html = d => `<b>${d.regione}</b>${riga('IVG fuori regione', fmt(d.ivg))}${riga('Aborti spontanei fuori regione', fmt(d.spontanei))}${riga('Rapporto', d.rapporto.toLocaleString('it-IT') + ' volte')}${d.dest ? `<div style="color:#6b7280;margin-top:4px">Dove vanno per un'IVG: ${d.dest}</div>` : ''}`;
+    g.append('rect').attr('x', 0).attr('width', W).attr('y', d => y(d.regione) - rh / 2).attr('height', rh).attr('fill', 'transparent')
+      .on('mousemove', (e, d) => mostra(e, html(d))).on('mouseleave', nascondi)
+      .on('touchstart', (e, d) => mostra(e.touches[0], html(d)), { passive: true });
+  }
+  tabella('#g-mobilita', [['Regione di residenza', d => d.regione], ['IVG fuori', d => fmt(d.ivg)], ['Spontanei fuori', d => fmt(d.spontanei)], ['Rapporto', d => d.rapporto.toLocaleString('it-IT')]], md);
+});
+addEventListener('scroll', nascondi, { passive: true });
+</script>
+</body>
+</html>
